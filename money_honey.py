@@ -50,12 +50,12 @@ class MoneyHoney:
             elif arg == "--no_json":
                 no_json = True
 
-        output_string_start = "\n" + str(amount) + " " + input_currency + " is"
         if amount is None or input_currency is None:
             print("You need to specify required parameters.\n")
             self.usage()
             sys.exit(2)
         else:
+            output_string_start = "\n" + str(amount) + " " + input_currency + " is"
             currency_changer.set_exchange_params(amount, input_currency, output_currency)
             converted_amounts = currency_changer.get_changed_values()
 
