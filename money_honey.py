@@ -7,16 +7,18 @@ from random import randint
 from actual_currencies import CurrenciesChanger
 
 
-# TODO: write documentation
-# TODO: add date from which courses are, to output
 class MoneyHoney:
     """
     I wasn't sure if it's allowed to use external libraries so I didn't use any.
+    Estimated time of coding 4MD.
     """
     def __init__(self):
         pass
 
     def arguments_handler(self):
+        """
+        Handles the arguments and flow of the program.
+        """
         try:
             opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "amount=", "input_currency=", "output_currency=",
                                                            "no_json"])
@@ -85,6 +87,14 @@ class MoneyHoney:
         return str(converted_amount) + " " + output_currency
 
     def check_currency(self, currency_changer, name, currency, symbol_currencies=None):
+        """
+        Checks if currency is valid and supported.
+        :param currency_changer: Instance of CurrenciesChanger.
+        :param name: Name of the input.
+        :param currency: Currency symbol or letter code.
+        :param symbol_currencies: Array of currency codes for specific symbol.
+        :return: Check function convert_symbol for returns.
+        """
         if symbol_currencies is not None and currency.upper() in symbol_currencies:
             return currency
         elif symbol_currencies is None and currency_changer.is_supported_currency(currency.upper()):
@@ -129,7 +139,8 @@ class MoneyHoney:
     def usage():
         print("--amount\n\tRequired. Can contain only number.\n"
               "--input_currency\n\tRequired. Can contain only three chars or currency symbol.\n"
-              "--output_currency\n\tOptional. Can contain only three chars or currency symbol.")
+              "--output_currency\n\tOptional. Can contain only three chars or currency symbol.\n"
+              "--no_json\n\tOptional. Will change output format from json to custom one.")
 
 
 if __name__ == "__main__":

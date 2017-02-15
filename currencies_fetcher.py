@@ -1,14 +1,23 @@
 import json
 import urllib.request
-from urllib.error import URLError, HTTPError
+from datetime import datetime
+from time import mktime, strptime
+from urllib.error import URLError
 
 
-# TODO: actualise latest_rates.json with new data on each connect
-# TODO: if date of actual currencies is same as today don't fetch them
-class CurrenciesRates:
+class CurrencyRates:
+    """
+    For production use I would recommend adding more sources of currency rates.
+    """
+    def __init__(self):
+        self.currency_rates = CurrencyRates._fetch_from_file()
+        self.data_date = datetime.fromtimestamp(mktime(strptime(self.currency_rates['date'], "%Y-%m-%d"))).date()
+        current_date = datetime.now().date()
 
-    @staticmethod
-    def fetch_currencies():
+        if self.data_date != current_date:
+            self._fetch_from_fixer()
+
+    def get_rates(self):
         """
         JSON format:
         {
@@ -22,23 +31,31 @@ class CurrenciesRates:
         }
         :return: JSON with currencies rates.
         """
-        return CurrenciesRates.fetch_from_fixer()
+        return self.currency_rates
 
-    @staticmethod
-    def fetch_from_fixer():
+    def _fetch_from_fixer(self):
+        """
+        Downloads currencies from https://api.fixer.io/latest. Sets them to self.currency_rates and saves them to file
+        for offline use.
+        """
         try:
             print("Fetching currency rates from https://api.fixer.io/latest.")
             currencies = urllib.request.urlopen("https://api.fixer.io/latest")
+        except URLError:
+            print("Couldn't load fresh currency rates from internet.\nFalling back to latest offline data ", end='')
+            print("from " + self.data_date.strftime('%d.%m.%Y') + ".")
+        else:
             print("Fetched successfully.")
-            return json.loads(currencies.read().decode('utf-8'))
-        # TODO: merge both exception to one and make sane output
-        except HTTPError as e:
-            print(e)
-        except URLError as e:
-            print("Couldn't load fresh currency rates from internet.\nFalling back to latest offline data.")
-            return CurrenciesRates.fetch_from_file()
+            json_string = currencies.read().decode('utf-8')
+            self.currency_rates = json.loads(json_string)
+            self._save_to_file(json_string)
 
     @staticmethod
-    def fetch_from_file():
-        with open('latest_rates.json') as latest_rates:
+    def _fetch_from_file():
+        with open('latest_rates.json', encoding='utf-8') as latest_rates:
             return json.loads(latest_rates.read())
+
+    @staticmethod
+    def _save_to_file(string):
+        with open('latest_rates.json', 'w', encoding='utf-8') as latest_rates:
+            latest_rates.write(string)

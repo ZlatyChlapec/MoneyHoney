@@ -2,12 +2,16 @@ import sys
 
 from decimal import Decimal
 
-from currencies_fetcher import CurrenciesRates
+from currencies_fetcher import CurrencyRates
 
 
 class CurrenciesChanger:
+    """
+    Exchange currencies based on currency rates. You need to use set_exchange_params before using any other functions
+    from this class.
+    """
     def __init__(self):
-        self.currency_rates = CurrenciesRates.fetch_currencies()
+        self.currency_rates = CurrencyRates().get_rates()
         # I could probably try and get them from http://www.xe.com/symbols.php but since I want to get them just once
         # and not every time program runs, here we go.
         self.currency_signs = {'€': ['EUR'], '$': ['AUD', 'CAD', 'MXN', 'NZD', 'SGD', 'USD'], 'лв': ['BGN'],
@@ -32,6 +36,10 @@ class CurrenciesChanger:
         return amount_eur * Decimal(self.currency_rates['rates'][currency])
 
     def get_changed_values(self):
+        """
+        Based on setup of class changes currency to desired currencies.
+        :return: Changed currencies in dictionary e.g. {'EUR': value}
+        """
         changed_values = {}
         currency_eur = self.amount
 
@@ -52,6 +60,11 @@ class CurrenciesChanger:
         return changed_values
 
     def is_supported_currency(self, currency):
+        """
+        Checks if currency is supported by current setup.
+        :param currency: Currency we want to check.
+        :return: True if currency is supported, False if it's not.
+        """
         if self.currency_rates['base'] == 'EUR':
             if currency in (list(self.currency_rates['rates'].keys()) + ['EUR'])\
                     or currency in list(self.currency_signs.keys()):
