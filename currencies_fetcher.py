@@ -5,7 +5,7 @@ from time import mktime, strptime
 from requests import RequestException
 
 
-class CurrencyRates:
+class CurrencyRates(object):
     """
     For production use I would recommend adding more sources of currency rates.
     """

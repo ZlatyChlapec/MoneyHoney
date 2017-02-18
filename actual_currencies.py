@@ -5,7 +5,7 @@ from decimal import Decimal
 from currencies_fetcher import CurrencyRates
 
 
-class CurrenciesChanger:
+class CurrenciesChanger(object):
     """
     Exchange currencies based on currency rates. You need to use set_exchange_params before using any other functions
     from this class.

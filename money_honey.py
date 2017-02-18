@@ -7,14 +7,11 @@ from random import randint
 from actual_currencies import CurrenciesChanger
 
 
-class MoneyHoney:
+class MoneyHoney(object):
     """
     I wasn't sure if it's allowed to use external libraries so I didn't use any.
     Estimated time of coding 4MD.
     """
-    def __init__(self):
-        pass
-
     def arguments_handler(self):
         """
         Handles the arguments and flow of the program.
@@ -95,7 +92,7 @@ class MoneyHoney:
         :param symbol_currencies: Array of currency codes for specific symbol.
         :return: Check function convert_symbol for returns.
         """
-        if symbol_currencies is not None and currency.upper() in symbol_currencies:
+        if symbol_currencies and currency.upper() in symbol_currencies:
             return currency
         elif symbol_currencies is None and currency_changer.is_supported_currency(currency.upper()):
             return self.convert_symbol(currency_changer, name, currency)
