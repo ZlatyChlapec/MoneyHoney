@@ -25,6 +25,12 @@ class CurrenciesChanger(object):
         self.currencies_to = None
 
     def set_exchange_params(self, amount, currency_from, currencies_to):
+        """
+        Set's variables so this class can work.
+        :param amount: Amount of money we want to change.
+        :param currency_from: Currency in which money are.
+        :param currencies_to: Array with Currencies to which we want to change.
+        """
         self.amount = amount
         self.currency_from = currency_from
         self.currencies_to = currencies_to

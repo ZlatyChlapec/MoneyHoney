@@ -1,6 +1,5 @@
+import argparse
 import json
-import sys
-import getopt
 from decimal import Decimal, InvalidOperation
 from random import randint
 
@@ -9,71 +8,146 @@ from actual_currencies import CurrenciesChanger
 
 class MoneyHoney(object):
     """
-    I wasn't sure if it's allowed to use external libraries so I didn't use any.
-    Estimated time of coding 4MD.
+    You can't convert money if arguments weren't set before. Same with print_results(), it's hard to print them before
+    money is converted.
     """
-    def arguments_handler(self):
+    def __init__(self):
         """
-        Handles the arguments and flow of the program.
+        Without instance of actual_currencies.CurrenciesChanger it's not possible to figure out which currencies are
+        supported.
         """
-        try:
-            opts, args = getopt.getopt(sys.argv[1:], "h", ["help", "amount=", "input_currency=", "output_currency=",
-                                                           "no_json"])
-        except getopt.GetoptError as err:
-            print(err, "\n")
-            self.usage()
-            sys.exit(2)
+        self.args = None
+        self.currency_changer = CurrenciesChanger()
+        self.converted_amounts = None
 
-        amount = None
-        input_currency = None
-        output_currency = None
-        no_json = False
-        currency_changer = CurrenciesChanger()
+    def arguments_parser(self):
+        args_parser = argparse.ArgumentParser()
+        required_args = args_parser.add_argument_group("required arguments")
+        required_args.add_argument("-a", "--amount", required=True, action=self.decimal_check(),
+                                   help="Amount of money we want to exchange.")
+        required_args.add_argument("-ic", "--input_currency", required=True,
+                                   action=self.currency_check(self.currency_changer),
+                                   help="Three chars code or currency symbol from which we are converting.")
+        args_parser.add_argument("-oc", "--output_currency", required=False,
+                                 action=self.currency_check(self.currency_changer),
+                                 help="Three chars code or currency symbol to which we are converting.")
+        args_parser.add_argument("-nj", "--no_json", required=False, action='store_true',
+                                 help="Will change output format from json to custom one.")
+        self.args = args_parser.parse_args()
 
-        for arg, value in opts:
-            if arg in ("-h", "--help"):
-                self.usage()
-                sys.exit()
-            elif arg == "--amount":
-                try:
-                    amount = Decimal(value)
-                except InvalidOperation:
-                    print("Couldn't parse amount. Make sure you are using valid number.")
-                    sys.exit(1)
-            elif arg == "--input_currency":
-                input_currency = self.check_currency(currency_changer, arg, value)
-            elif arg == "--output_currency":
-                output_currency = self.check_currency(currency_changer, arg, value)
-            elif arg == "--no_json":
-                no_json = True
-
-        if amount is None or input_currency is None:
-            print("You need to specify required parameters.\n")
-            self.usage()
-            sys.exit(2)
-        else:
-            output_string_start = "\n" + str(amount) + " " + input_currency + " is"
-            currency_changer.set_exchange_params(amount, input_currency, output_currency)
-            converted_amounts = currency_changer.get_changed_values()
-
-            if no_json:
-                if len(converted_amounts) == 1:
-                    print(output_string_start + " " + self.output_string_end(format(self.get_first_value(
-                        converted_amounts.values()), '.4f'), self.get_first_value(converted_amounts.keys())) + ".")
+    def currency_check(self, currency_changer):
+        """
+        Custom action for argument parser to restrict values of currency inputs.
+        :param currency_changer: Instance of class actual_currencies.CurrenciesChanger.
+        :return: Class which inherits from argparse.Action and takes care of restrictions.
+        """
+        class CurrencyCheck(argparse.Action):
+            def __call__(self, parser, namespace, values, option_string=None):
+                if isinstance(values, str) and len(values) <= 3:
+                    if not currency_changer.is_supported_currency(values.upper()):
+                        parser.error("argument {0}/{1}: '{2}' is not supported currency."
+                                     .format(self.option_strings[0], self.option_strings[1], values))
                 else:
-                    print(output_string_start)
-                    for currency, currency_amount in converted_amounts.items():
-                        print("\t" + self.output_string_end(format(currency_amount, '>20.4f'), currency))
+                    parser.error("argument {0}/{1}: has to be str no longer than 3 chars."
+                                 .format(self.option_strings[0], self.option_strings[1]))
+
+                setattr(namespace, self.dest, values)
+
+        return CurrencyCheck
+
+    def decimal_check(self):
+        """
+        Check for correct decimal. Could have been just class but to keep it consistent I went with func.
+        :return: Decimal value.
+        """
+        class DecimalCheck(argparse.Action):
+            def __call__(self, parser, namespace, values, option_string=None):
+                try:
+                    values = Decimal(values)
+                except InvalidOperation:
+                    parser.error("argument {0}/{1}: has to be Decimal."
+                                 .format(self.option_strings[0], self.option_strings[1]))
+
+                setattr(namespace, self.dest, values)
+
+        return DecimalCheck
+
+    def convert_money(self):
+        """
+        Prepare to inputs to get converted and convert.
+        """
+        self.handle_input_currency()
+        self.handle_output_currency()
+        self.currency_changer.set_exchange_params(self.args.amount, self.args.input_currency, self.args.output_currency)
+        self.converted_amounts = self.currency_changer.get_changed_values()
+
+    def handle_input_currency(self):
+        # if currency is symbol
+        if len(self.args.input_currency) != 3:
+            # find all currency codes for that symbol
+            currency_codes = self.convert_symbol(self.args.input_currency)
+            # if there are more than one
+            if len(currency_codes) > 1:
+                # ask if he cares
+                if input("Would you care to specify? y/n\n").lower() in ['y', 'yes']:
+                    # if he does allow him to choose
+                    print("You can choose from: {0}".format(currency_codes))
+                    specified_cur_code = input("Enter specific currency code:\n").upper()
+                    # if he chose correctly set that as new input_currency
+                    if specified_cur_code in currency_codes:
+                        self.args.input_currency = specified_cur_code
+                    # if no give him hell
+                    else:
+                        print("You failed.")
+                        self.handle_input_currency()
+                # if he doesn't care me neither
+                else:
+                    self.args.input_currency = currency_codes[randint(0, (len(currency_codes) - 1))]
+            # if symbol has just one currency don't bother user, just get rid of array
             else:
-                output_json = {}
+                self.args.input_currency = self.get_first_value(currency_codes)
+        # if it's not symbol just make it upper so it looks nice in output
+        else:
+            self.args.input_currency = self.args.input_currency.upper()
 
-                converted_currencies = {}
-                for currency, currency_amount in converted_amounts.items():
-                    converted_currencies[currency] = format(currency_amount, '.4f')
+    def handle_output_currency(self):
+        # if currency is symbol get currencies to which to convert
+        if len(self.args.output_currency) != 3:
+            self.args.output_currency = self.convert_symbol(self.args.output_currency)
+        # if it's char code just make sure it's upper and in array
+        else:
+            self.args.output_currency = [self.args.output_currency.upper()]
 
-                output_json['input'] = {'amount': format(amount, '.4f'), 'currency': input_currency}
-                output_json['output'] = converted_currencies
-                print("\n" + json.dumps(output_json, indent=4))
+    def convert_symbol(self, symbol):
+        """
+        Converts symbol to currency char codes. Shouldn't be used before arguments_parser().
+        :param symbol: Symbol we want to convert.
+        :return: Array with currency codes for symbol.
+        """
+        return self.currency_changer.currency_signs[symbol]
+
+    def print_results(self):
+        if self.args.no_json:
+            output_string_start = "\n" + str(self.args.amount) + " " + self.args.input_currency + " is"
+            if len(self.converted_amounts) == 1:
+                print(output_string_start + " " +
+                      self.output_string_end(format(self.get_first_value(self.converted_amounts.values()), '.4f'),
+                                             self.get_first_value(self.converted_amounts.keys())) +
+                      ".")
+            else:
+                print(output_string_start)
+                for currency, currency_amount in self.converted_amounts.items():
+                    print("\t" + self.output_string_end(format(currency_amount, '>20.4f'), currency))
+        else:
+            output_json = {}
+
+            converted_currencies = {}
+            for currency, currency_amount in self.converted_amounts.items():
+                converted_currencies[currency] = format(currency_amount, '.4f')
+
+            output_json['input'] = {'amount': format(self.args.amount, '.4f'), 'currency': self.args.input_currency}
+            output_json['output'] = converted_currencies
+            print("\n" + json.dumps(output_json, indent=4))
 
     @staticmethod
     def get_first_value(my_list):
@@ -83,62 +157,8 @@ class MoneyHoney(object):
     def output_string_end(converted_amount, output_currency):
         return str(converted_amount) + " " + output_currency
 
-    def check_currency(self, currency_changer, name, currency, symbol_currencies=None):
-        """
-        Checks if currency is valid and supported.
-        :param currency_changer: Instance of CurrenciesChanger.
-        :param name: Name of the input.
-        :param currency: Currency symbol or letter code.
-        :param symbol_currencies: Array of currency codes for specific symbol.
-        :return: Check function convert_symbol for returns.
-        """
-        if symbol_currencies and currency.upper() in symbol_currencies:
-            return currency
-        elif symbol_currencies is None and currency_changer.is_supported_currency(currency.upper()):
-            return self.convert_symbol(currency_changer, name, currency)
-        else:
-            print("Incorrect " + name[2:] + ". Either it isn't supported or you messed up on your part.")
-            sys.exit(1)
-
-    def convert_symbol(self, currency_changer, input_name, symbol):
-        """
-        Converts all symbols to currency code and puts "--output_currency" into array.
-        :param currency_changer: Instance of class actual_currencies.CurrenciesChanger.
-        :param input_name: Name of the input. [--input_currency, --output_currency]
-        :param symbol: Symbol or currency code.
-        :return: Value if input_name equals "--input_currency", array otherwise.
-        """
-        if symbol in list(currency_changer.currency_signs.keys()):
-            currency_codes = currency_changer.currency_signs[symbol]
-            if input_name == "--input_currency" and len(currency_codes) > 1:
-                if input("Would you care to specify? y/n\n").lower() in ['y', 'yes']:
-
-                    print("You can choose from: [", end='')
-                    for i in range(len(currency_codes)):
-                        if i == len(currency_codes) - 1:
-                            print(currency_codes[i] + "]")
-                        else:
-                            print(currency_codes[i] + "; ", end='')
-
-                    return self.check_currency(currency_changer, input_name, input("Enter specific currency code:\n"),
-                                               currency_codes).upper()
-                else:
-                    num_options = len(currency_codes)
-                    return currency_codes[randint(0, (num_options - 1))]
-            else:
-                return currency_codes[0] if input_name == "--input_currency"\
-                                            and len(currency_codes) == 1 else currency_codes
-        else:
-            # it's not symbol
-            return symbol.upper() if input_name == "--input_currency" else [symbol.upper()]
-
-    @staticmethod
-    def usage():
-        print("--amount\n\tRequired. Can contain only number.\n"
-              "--input_currency\n\tRequired. Can contain only three chars or currency symbol.\n"
-              "--output_currency\n\tOptional. Can contain only three chars or currency symbol.\n"
-              "--no_json\n\tOptional. Will change output format from json to custom one.")
-
-
 if __name__ == "__main__":
-    MoneyHoney().arguments_handler()
+    money_honey = MoneyHoney()
+    money_honey.arguments_parser()
+    money_honey.convert_money()
+    money_honey.print_results()
