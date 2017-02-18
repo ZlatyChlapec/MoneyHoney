@@ -1,8 +1,8 @@
 import json
-import urllib.request
+import requests
 from datetime import datetime
 from time import mktime, strptime
-from urllib.error import URLError
+from requests import RequestException
 
 
 class CurrencyRates:
@@ -40,15 +40,14 @@ class CurrencyRates:
         """
         try:
             print("Fetching currency rates from https://api.fixer.io/latest.")
-            currencies = urllib.request.urlopen("https://api.fixer.io/latest")
-        except URLError:
+            fixer_response = requests.get("https://api.fixer.io/latest")
+        except RequestException:
             print("Couldn't load fresh currency rates from internet.\nFalling back to latest offline data ", end='')
             print("from " + self.data_date.strftime('%d.%m.%Y') + ".")
         else:
             print("Fetched successfully.")
-            json_string = currencies.read().decode('utf-8')
-            self.currency_rates = json.loads(json_string)
-            self._save_to_file(json_string)
+            self.currency_rates = fixer_response.json()
+            self._save_to_file(fixer_response.text)
 
     @staticmethod
     def _fetch_from_file():
