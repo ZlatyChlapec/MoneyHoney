@@ -74,7 +74,7 @@ class MoneyHoney(object):
 
     def convert_money(self):
         """
-        Prepare to inputs to get converted and convert.
+        Prepare inputs to get converted followed up with conversion.
         """
         self.handle_input_currency()
         self.handle_output_currency()
