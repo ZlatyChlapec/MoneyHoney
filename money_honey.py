@@ -105,7 +105,7 @@ class MoneyHoney(object):
                     self.args.input_currency = currency_codes[randint(0, (len(currency_codes) - 1))]
             # if symbol has just one currency don't bother user, just get rid of array
             else:
-                self.args.input_currency = self.get_first_value(currency_codes)
+                self.args.input_currency = currency_codes[0]
         # if it's not symbol just make it upper so it looks nice in output
         else:
             self.args.input_currency = self.args.input_currency.upper()
@@ -131,8 +131,8 @@ class MoneyHoney(object):
             output_string_start = "\n" + str(self.args.amount) + " " + self.args.input_currency + " is"
             if len(self.converted_amounts) == 1:
                 print(output_string_start + " " +
-                      self.output_string_end(format(self.get_first_value(self.converted_amounts.values()), '.4f'),
-                                             self.get_first_value(self.converted_amounts.keys())) +
+                      self.output_string_end(format(list(self.converted_amounts.values())[0], '.4f'),
+                                             list(self.converted_amounts.keys())[0]) +
                       ".")
             else:
                 print(output_string_start)
@@ -148,10 +148,6 @@ class MoneyHoney(object):
             output_json['input'] = {'amount': format(self.args.amount, '.4f'), 'currency': self.args.input_currency}
             output_json['output'] = converted_currencies
             print("\n" + json.dumps(output_json, indent=4))
-
-    @staticmethod
-    def get_first_value(my_list):
-        return next(iter(my_list))
 
     @staticmethod
     def output_string_end(converted_amount, output_currency):
