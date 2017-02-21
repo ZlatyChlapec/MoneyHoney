@@ -1,7 +1,8 @@
 import json
-import requests
 from datetime import datetime
 from time import mktime, strptime
+
+import requests
 from requests import RequestException
 
 
@@ -15,7 +16,11 @@ class CurrencyRates(object):
         current_date = datetime.now().date()
 
         if self.data_date != current_date:
-            self._fetch_from_fixer()
+            try:
+                self._fetch_from_fixer()
+            except RequestException:
+                print("Couldn't load fresh currency rates from internet.\nFalling back to latest offline data ", end='')
+                print("from " + self.data_date.strftime('%d.%m.%Y') + ".")
 
     def get_rates(self):
         """
@@ -42,8 +47,7 @@ class CurrencyRates(object):
             print("Fetching currency rates from https://api.fixer.io/latest.")
             fixer_response = requests.get("https://api.fixer.io/latest")
         except RequestException:
-            print("Couldn't load fresh currency rates from internet.\nFalling back to latest offline data ", end='')
-            print("from " + self.data_date.strftime('%d.%m.%Y') + ".")
+            raise
         else:
             print("Fetched successfully.")
             self.currency_rates = fixer_response.json()

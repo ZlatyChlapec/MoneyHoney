@@ -17,8 +17,9 @@ class MoneyHoney(object):
         supported.
         """
         self.args = None
-        self.currency_changer = CurrenciesChanger()
         self.converted_amounts = None
+        self.currency_changer = CurrenciesChanger()
+        self.currency_changer.check_data_format()
 
     def arguments_parser(self):
         args_parser = argparse.ArgumentParser()

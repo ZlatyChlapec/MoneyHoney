@@ -24,6 +24,10 @@ class CurrenciesChanger(object):
         self.currency_from = None
         self.currencies_to = None
 
+    def check_data_format(self):
+        if self.currency_rates['base'] != 'EUR':
+            raise SyntaxWarning("Structure of data probably changed. Things are broken.")
+
     def set_exchange_params(self, amount, currency_from, currencies_to):
         """
         Set's variables so this class can work.
@@ -71,12 +75,8 @@ class CurrenciesChanger(object):
         :param currency: Currency we want to check.
         :return: True if currency is supported, False if it's not.
         """
-        if self.currency_rates['base'] == 'EUR':
-            if currency in (list(self.currency_rates['rates'].keys()) + ['EUR'])\
-                    or currency in list(self.currency_signs.keys()):
-                return True
-            else:
-                return False
+        if currency in (list(self.currency_rates['rates'].keys()) + ['EUR'])\
+                or currency in list(self.currency_signs.keys()):
+            return True
         else:
-            print("Exchange rates provider changed API and application needs to be updated accordingly.")
-            sys.exit(1)
+            return False
